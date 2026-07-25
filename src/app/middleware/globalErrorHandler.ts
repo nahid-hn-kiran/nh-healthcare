@@ -1,0 +1,25 @@
+import { NextFunction, Request, Response } from "express";
+import { envVars } from "../config/env";
+import status from "http-status";
+
+export const globalErrorHandler = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  err: any,
+  req: Request,
+  res: Response,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  next: NextFunction,
+) => {
+  if (envVars.NODE_ENV === "development") {
+    console.log("Error from Global Error Handler ", err);
+  }
+
+  const statusCode: number = status.INTERNAL_SERVER_ERROR;
+  const message: string = "Internal server error";
+
+  res.status(statusCode).json({
+    success: false,
+    message: message,
+    error: err.message,
+  });
+};

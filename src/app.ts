@@ -1,6 +1,7 @@
-import express, { Application, Request, Response } from "express";
-import { specialtyRoutes } from "./app/module/specialty/specialty.route";
+import express, { Application } from "express";
 import { indexRoutes } from "./app/routes";
+import { globalErrorHandler } from "./app/middleware/globalErrorHandler";
+import { notFound } from "./app/middleware/notFound";
 
 const app: Application = express();
 
@@ -12,5 +13,11 @@ app.use(express.json());
 
 // Routes
 app.use("/api/v1", indexRoutes);
+
+// Global Error Handler
+app.use(globalErrorHandler);
+
+// Not Found
+app.use(notFound);
 
 export default app;

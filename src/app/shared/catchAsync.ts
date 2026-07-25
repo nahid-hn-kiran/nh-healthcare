@@ -5,11 +5,7 @@ const catchAsync = (fn: RequestHandler) => {
     try {
       await fn(req, res, next);
     } catch (error) {
-      res.status(401).json({
-        success: false,
-        message: "Failed",
-        data: error,
-      });
+      next(error);
     }
   };
 };
