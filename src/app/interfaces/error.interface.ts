@@ -9,4 +9,5 @@ export interface IErrorResposne {
   message: string;
   errorSource?: IErrorSources[];
   error?: unknown;
+  stack?: string;
 }
