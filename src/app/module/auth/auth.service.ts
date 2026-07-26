@@ -1,5 +1,6 @@
 import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
+import { tokenUtils } from "../../utils/token";
 
 interface IRegisterPatientPayload {
   name: string;
@@ -67,7 +68,24 @@ const loginUser = async (payload: IUserLoginPayload) => {
     throw new Error("Failed to Login");
   }
 
-  return data;
+  const accessToken = tokenUtils.getAccessToken({
+    id: data.user.id,
+    name: data.user.name,
+    email: data.user.email,
+    role: data.user.role,
+    status: data.user.status,
+    isDeleted: data.user.isDeleted,
+  });
+
+  const refreshToken = tokenUtils.getRefreshToken({
+    id: data.user.id,
+    email: data.user.email,
+    role: data.user.role,
+    status: data.user.status,
+    isDeleted: data.user.isDeleted,
+  });
+
+  return { accessToken, refreshToken, ...data };
 };
 
 export const authService = {

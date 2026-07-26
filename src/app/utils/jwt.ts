@@ -10,7 +10,7 @@ const createToken = (
 };
 
 const verifyToken = (token: string, secret: string) => {
-  const decoded = jwt.verify(token, secret);
+  const decoded = jwt.verify(token, secret) as JwtPayload;
   return {
     success: true,
     data: decoded,
@@ -18,7 +18,7 @@ const verifyToken = (token: string, secret: string) => {
 };
 
 const decodeToken = (token: string) => {
-  const decoded = jwt.decode(token);
+  const decoded = jwt.decode(token) as JwtPayload;
   return decoded;
 };
 
