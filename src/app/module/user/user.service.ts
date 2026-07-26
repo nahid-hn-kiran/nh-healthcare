@@ -137,14 +137,16 @@ const createAdmin = async (payload: ICreateAdminPayload) => {
     );
   }
 
-  const { admin, role, password } = payload;
+  // const { admin, role, password } = payload;
 
   const userData = await auth.api.signUpEmail({
     body: {
-      ...admin,
-      password,
-      role,
+      email: payload.admin.email,
+      password: payload.password,
+      role: Role.ADMIN,
+      name: payload.admin.name,
       needPasswordChange: true,
+      rememberMe: false,
     },
   });
 
@@ -156,7 +158,22 @@ const createAdmin = async (payload: ICreateAdminPayload) => {
           ...payload.admin,
         },
       });
-      return admin;
+
+      const createdAdmin = await tx.admin.findUnique({
+        where: { id: admin.id },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          profilePhoto: true,
+          contactNumber: true,
+          isDeleted: true,
+          createdAt: true,
+          updatedAt: true,
+          user: true,
+        },
+      });
+      return createdAdmin;
     });
     return result;
   } catch (error) {
