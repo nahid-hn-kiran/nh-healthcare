@@ -1,6 +1,10 @@
 import { Role, Specialty } from "../../../generated/prisma/client";
 import { prisma } from "../../lib/prisma";
-import { ICreateAdminPayload, ICreateDoctorPayload } from "./user.interface";
+import {
+  ICreateAdminPayload,
+  ICreateDoctorPayload,
+  ICreateSuperAdminPayload,
+} from "./user.interface";
 import { auth } from "../../lib/auth";
 
 const createDoctor = async (payload: ICreateDoctorPayload) => {
@@ -187,7 +191,71 @@ const createAdmin = async (payload: ICreateAdminPayload) => {
   }
 };
 
+const createSuperAdmin = async (payload: ICreateSuperAdminPayload) => {
+  const userExists = await prisma.user.findUnique({
+    where: {
+      email: payload.superadmin.email,
+    },
+  });
+
+  if (userExists) {
+    throw new Error(
+      `User already exists with the email ${payload.superadmin.email}`,
+    );
+  }
+
+  // const { admin, role, password } = payload;
+
+  const userData = await auth.api.signUpEmail({
+    body: {
+      email: payload.superadmin.email,
+      password: payload.password,
+      role: Role.SUPER_ADMIN,
+      name: payload.superadmin.name,
+      needPasswordChange: true,
+      rememberMe: false,
+    },
+  });
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const superadmin = await tx.superAdmin.create({
+        data: {
+          userId: userData.user.id,
+          ...payload.superadmin,
+        },
+      });
+
+      const createdSuperAdmin = await tx.superAdmin.findUnique({
+        where: { id: superadmin.id },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          profilePhoto: true,
+          contactNumber: true,
+          isDeleted: true,
+          createdAt: true,
+          updatedAt: true,
+          user: true,
+        },
+      });
+      return createdSuperAdmin;
+    });
+    return result;
+  } catch (error) {
+    console.log("Transaction error : ", error);
+    await prisma.user.delete({
+      where: {
+        id: userData.user.id,
+      },
+    });
+    throw error;
+  }
+};
+
 export const userService = {
   createDoctor,
   createAdmin,
+  createSuperAdmin,
 };

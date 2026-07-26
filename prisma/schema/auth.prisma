@@ -14,9 +14,10 @@ model User {
   sessions           Session[]
   accounts           Account[]
 
-  patient Patient?
-  doctor  Doctor?
-  admin   Admin?
+  patient    Patient?
+  doctor     Doctor?
+  admin      Admin?
+  superadmin SuperAdmin?
 
   @@unique([email])
   @@map("user")
