@@ -1,6 +1,6 @@
 import { Role, Specialty } from "../../../generated/prisma/client";
 import { prisma } from "../../lib/prisma";
-import { ICreateDoctorPayload } from "./user.interface";
+import { ICreateAdminPayload, ICreateDoctorPayload } from "./user.interface";
 import { auth } from "../../lib/auth";
 
 const createDoctor = async (payload: ICreateDoctorPayload) => {
@@ -124,6 +124,53 @@ const createDoctor = async (payload: ICreateDoctorPayload) => {
   }
 };
 
+const createAdmin = async (payload: ICreateAdminPayload) => {
+  const userExists = await prisma.user.findUnique({
+    where: {
+      email: payload.admin.email,
+    },
+  });
+
+  if (userExists) {
+    throw new Error(
+      `User already exists with the email ${payload.admin.email}`,
+    );
+  }
+
+  const { admin, role, password } = payload;
+
+  const userData = await auth.api.signUpEmail({
+    body: {
+      ...admin,
+      password,
+      role,
+      needPasswordChange: true,
+    },
+  });
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const admin = await tx.admin.create({
+        data: {
+          userId: userData.user.id,
+          ...payload.admin,
+        },
+      });
+      return admin;
+    });
+    return result;
+  } catch (error) {
+    console.log("Transaction error : ", error);
+    await prisma.user.delete({
+      where: {
+        id: userData.user.id,
+      },
+    });
+    throw error;
+  }
+};
+
 export const userService = {
   createDoctor,
+  createAdmin,
 };

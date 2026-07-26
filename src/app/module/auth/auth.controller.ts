@@ -10,7 +10,7 @@ const registerPatient = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     httpStatusCode: 201,
     success: true,
-    message: "Specialty created successfully",
+    message: "Patient registered successfully",
     data: result,
   });
 });
