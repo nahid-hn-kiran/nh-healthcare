@@ -9,7 +9,7 @@ router.get("/", doctorController.getAllDoctors);
 router.get("/:id", doctorController.getDoctorById);
 router.patch(
   "/:id",
-  checkAuth(Role.ADMIN, Role.DOCTOR, Role.SUPER_ADMIN),
+  checkAuth(Role.ADMIN, Role.SUPER_ADMIN),
   doctorController.updateDoctor,
 );
 router.put(

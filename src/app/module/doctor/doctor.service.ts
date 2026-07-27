@@ -24,11 +24,25 @@ const getDoctorById = async (id: string) => {
       isDeleted: false,
     },
     include: {
+      user: true,
+      appointments: {
+        include: {
+          patient: true,
+          schedule: true,
+          prescription: true,
+        },
+      },
+      doctorSchedules: {
+        include: {
+          schedule: true,
+        },
+      },
       specialties: {
         include: {
           specialty: true,
         },
       },
+      reviews: true,
     },
   });
 
