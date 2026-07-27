@@ -89,6 +89,14 @@ export const checkAuth =
           "Forbidden access! You do not have permission to access this resoure.",
         );
       }
+
+      console.log(req.user);
+
+      req.user = {
+        userId: verifyToken.data.id,
+        role: verifyToken.data.role,
+        email: verifyToken.data.email,
+      };
       next();
     } catch (error) {
       next(error);

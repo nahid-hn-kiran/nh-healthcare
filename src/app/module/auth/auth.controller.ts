@@ -23,16 +23,27 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
   tokenUtils.setAccessTokenCookie(res, accessToken);
   tokenUtils.setRefreshTokenCookie(res, refreshToken);
   tokenUtils.setBetterAuthSessionCookie(res, token);
+  sendResponse(res, {
+    httpStatusCode: 201,
+    success: true,
+    message: "User retrived successfully",
+    data: rest,
+  });
+});
+
+const getMe = catchAsync(async (req: Request, res: Response) => {
+  const result = await authService.getMe(req.user);
 
   sendResponse(res, {
     httpStatusCode: 201,
     success: true,
-    message: "Logged in successfully",
-    data: rest,
+    message: "Profile retrived successfully",
+    data: result,
   });
 });
 
 export const authController = {
   registerPatient,
   loginUser,
+  getMe,
 };

@@ -5,7 +5,6 @@ import { doctorService } from "./doctor.service";
 
 const getAllDoctors = catchAsync(async (req: Request, res: Response) => {
   const result = await doctorService.getAllDoctors();
-
   sendResponse(res, {
     httpStatusCode: 200,
     success: true,
