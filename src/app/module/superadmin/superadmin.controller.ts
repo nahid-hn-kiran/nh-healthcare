@@ -44,8 +44,9 @@ const updateSuperAdmin = catchAsync(async (req: Request, res: Response) => {
 
 const deleteSuperAdmin = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
+  const user = req.user;
 
-  const result = await superAdminService.deleteSuperAdmin(id as string);
+  const result = await superAdminService.deleteSuperAdmin(id as string, user);
 
   sendResponse(res, {
     httpStatusCode: 200,

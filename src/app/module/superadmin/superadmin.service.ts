@@ -2,6 +2,7 @@ import status from "http-status";
 import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../lib/prisma";
 import { IUpdateSuperAdminPayload } from "./superadmin.interface";
+import { IRequestUser } from "../../interfaces/requestUser.interface";
 
 const getAllSuperAdmins = async () => {
   const admin = await prisma.superAdmin.findMany({
@@ -60,12 +61,19 @@ const updateSuperAdmin = async (
   };
 };
 
-const deleteSuperAdmin = async (id: string) => {
+const deleteSuperAdmin = async (id: string, user: IRequestUser) => {
   const admin = await prisma.superAdmin.findUnique({
     where: {
       id,
     },
   });
+
+  if (admin?.id === user.userId) {
+    throw new AppError(
+      status.FORBIDDEN,
+      "Sorry, You cannot delete your own profile.",
+    );
+  }
 
   if (!admin) {
     throw new AppError(status.NOT_FOUND, "No Super admin Found!");
