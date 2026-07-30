@@ -6,61 +6,94 @@ import { prisma } from "../../lib/prisma";
 import { tokenUtils } from "../../utils/token";
 import { jwtUtils } from "../../utils/jwt";
 import { envVars } from "../../config/env";
-import { IChangePasswordPayload } from "./auth.interface";
-
-interface IRegisterPatientPayload {
-  name: string;
-  email: string;
-  password: string;
-}
-
-interface IUserLoginPayload {
-  email: string;
-  password: string;
-}
+import {
+  IChangePasswordPayload,
+  ILoginUserPayload,
+  IRegisterPatientPayload,
+} from "./auth.interface";
+import { UserStatus } from "../../../generated/prisma/enums";
 
 const registerPatient = async (payload: IRegisterPatientPayload) => {
   const { name, email, password } = payload;
+
+  const isUserExists = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
+
+  if (isUserExists) {
+    throw new AppError(status.CONFLICT, "User already exists!");
+  }
 
   const data = await auth.api.signUpEmail({
     body: {
       name,
       email,
       password,
+      //default values
+      // needsPasswordChange: false,
+      // role: Role.PATIENT
     },
   });
 
-  if (!data) {
-    throw new Error("Failed to register user");
+  if (!data.user) {
+    // throw new Error("Failed to register patient");
+    throw new AppError(status.BAD_REQUEST, "Failed to register patient");
   }
 
-  const patient = await prisma.$transaction(async (tx) => {
-    try {
-      return await tx.patient.create({
+  //TODO : Create Patient Profile In Transaction After Sign Up Of Patient In USer Model
+  try {
+    const patient = await prisma.$transaction(async (tx) => {
+      const patientTx = await tx.patient.create({
         data: {
           userId: data.user.id,
           name: payload.name,
           email: payload.email,
         },
       });
-    } catch (error) {
-      await tx.user.delete({
-        where: {
-          id: data.user.id,
-        },
-      });
 
-      throw error;
-    }
-  });
+      return patientTx;
+    });
 
-  return {
-    ...data,
-    patient,
-  };
+    const accessToken = tokenUtils.getAccessToken({
+      userId: data.user.id,
+      role: data.user.role,
+      name: data.user.name,
+      email: data.user.email,
+      status: data.user.status,
+      isDeleted: data.user.isDeleted,
+      emailVerified: data.user.emailVerified,
+    });
+
+    const refreshToken = tokenUtils.getRefreshToken({
+      userId: data.user.id,
+      role: data.user.role,
+      name: data.user.name,
+      email: data.user.email,
+      status: data.user.status,
+      isDeleted: data.user.isDeleted,
+      emailVerified: data.user.emailVerified,
+    });
+
+    return {
+      ...data,
+      accessToken,
+      refreshToken,
+      patient,
+    };
+  } catch (error) {
+    console.log("Transaction error : ", error);
+    await prisma.user.delete({
+      where: {
+        id: data.user.id,
+      },
+    });
+    throw error;
+  }
 };
 
-const loginUser = async (payload: IUserLoginPayload) => {
+const loginUser = async (payload: ILoginUserPayload) => {
   const { email, password } = payload;
 
   const data = await auth.api.signInEmail({
@@ -261,6 +294,101 @@ const logoutUser = async (sessionToken: string) => {
   return result;
 };
 
+const verifyEmail = async (email: string, otp: string) => {
+  const result = await auth.api.verifyEmailOTP({
+    body: {
+      email,
+      otp,
+    },
+  });
+
+  if (result.status && !result.user.emailVerified) {
+    await prisma.user.update({
+      where: {
+        email,
+      },
+      data: {
+        emailVerified: true,
+      },
+    });
+  }
+};
+
+const forgetPassword = async (email: string) => {
+  const isUserExist = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
+
+  if (!isUserExist) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  if (!isUserExist.emailVerified) {
+    throw new AppError(status.BAD_REQUEST, "Email not verified");
+  }
+
+  if (isUserExist.isDeleted || isUserExist.status === UserStatus.DELETED) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  await auth.api.requestPasswordResetEmailOTP({
+    body: {
+      email,
+    },
+  });
+};
+
+const resetPassword = async (
+  email: string,
+  otp: string,
+  newPassword: string,
+) => {
+  const isUserExist = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
+
+  if (!isUserExist) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  if (!isUserExist.emailVerified) {
+    throw new AppError(status.BAD_REQUEST, "Email not verified");
+  }
+
+  if (isUserExist.isDeleted || isUserExist.status === UserStatus.DELETED) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  await auth.api.resetPasswordEmailOTP({
+    body: {
+      email,
+      otp,
+      password: newPassword,
+    },
+  });
+
+  if (isUserExist.needPasswordChange) {
+    await prisma.user.update({
+      where: {
+        id: isUserExist.id,
+      },
+      data: {
+        needPasswordChange: false,
+      },
+    });
+  }
+
+  await prisma.session.deleteMany({
+    where: {
+      userId: isUserExist.id,
+    },
+  });
+};
+
 export const authService = {
   registerPatient,
   loginUser,
@@ -268,4 +396,7 @@ export const authService = {
   getNewToken,
   changePassword,
   logoutUser,
+  verifyEmail,
+  forgetPassword,
+  resetPassword,
 };
