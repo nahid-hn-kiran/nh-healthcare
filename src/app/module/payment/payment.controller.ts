@@ -3,14 +3,14 @@ import { Request, Response } from "express";
 import status from "http-status";
 import { envVars } from "../../config/env";
 import { stripe } from "../../config/stripe.config";
-import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import { PaymentService } from "./payment.service";
+import catchAsync from "../../shared/catchAsync";
 
 const handleStripeWebhookEvent = catchAsync(
   async (req: Request, res: Response) => {
     const signature = req.headers["stripe-signature"] as string;
-    const webhookSecret = envVars.STRIPE.STRIPE_WEBHOOK_SECRET;
+    const webhookSecret = envVars.stripe.STRIPE_WEBHOOK_SECRET;
 
     if (!signature || !webhookSecret) {
       console.error("Missing Stripe signature or webhook secret");
